@@ -11,4 +11,4 @@ COPY . .
 
 ENV GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]

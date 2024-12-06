@@ -3,12 +3,14 @@ from flask import Blueprint, request, jsonify
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.schedule import Schedule
+from app.middleware.auth import verify_token
 
 # Create a Blueprint for schedule routes
 schedules_blueprint = Blueprint('schedules', __name__)
 
 # GET: Retrieve all schedules
 @schedules_blueprint.route("/schedules", methods=["GET"])
+@verify_token
 def get_schedules():
     try:
         db: Session = next(get_db())
@@ -32,18 +34,22 @@ def get_schedules():
 
 # POST: Save a new schedule
 @schedules_blueprint.route("/schedules", methods=["POST"])
+@verify_token
 def save_schedule():
     data = request.get_json()
+    reminder = data.get('reminder')
+    if reminder is not None:
+        reminder = int(reminder)
     try:
         db: Session = next(get_db())
         new_schedule = Schedule(
-            user_id=data['user_id'],
+            user_id=request.user_uid,
             title=data['title'],
             description=data.get('description'),
             start_time=data['start_time'],
             end_time=data['end_time'],
             location=data.get('location'),
-            reminder=data.get('reminder')
+            reminder=reminder
         )
         db.add(new_schedule)
         db.commit()
@@ -55,6 +61,7 @@ def save_schedule():
 
 # PUT: Update an existing schedule
 @schedules_blueprint.route("/schedules/<int:schedule_id>", methods=["PUT"])
+@verify_token
 def update_schedule(schedule_id):
     data = request.get_json()
     try:
@@ -78,6 +85,7 @@ def update_schedule(schedule_id):
 
 # DELETE: Remove a schedule
 @schedules_blueprint.route("/schedules/<int:schedule_id>", methods=["DELETE"])
+@verify_token
 def delete_schedule(schedule_id):
     try:
         db: Session = next(get_db())

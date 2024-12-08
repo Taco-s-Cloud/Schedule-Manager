@@ -14,7 +14,9 @@ schedules_blueprint = Blueprint('schedules', __name__)
 def get_schedules():
     try:
         db: Session = next(get_db())
-        schedules = db.query(Schedule).all()
+        user_id = request.user_uid
+        schedules = db.query(Schedule).filter(Schedule.user_id==user_id).all()
+        #schedules = db.query(Schedule).all()
         schedule_list = [
             {
                 "user_id": schedule.user_id,

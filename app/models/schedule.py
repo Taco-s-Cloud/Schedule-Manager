@@ -3,7 +3,7 @@ from sqlalchemy import Column, Integer, String, DateTime
 from app.database import Base
 
 class Schedule(Base):
-    __tablename__ = 'schedules2'
+    __tablename__ = 'schedules'
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, nullable=False)

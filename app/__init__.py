@@ -5,7 +5,7 @@ from .database import engine, Base
 
 def create_app():
     app = Flask(__name__)
-    CORS(app, origins=["https://taco-ui-1024364663505.us-central1.run.app"])
+    CORS(app)
     # Register blueprints
     app.register_blueprint(schedules.schedules_blueprint)
     # Create tables if they don't exist

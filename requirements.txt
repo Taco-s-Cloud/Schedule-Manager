@@ -6,3 +6,6 @@ sqlalchemy
 firebase-admin
 google-cloud-logging
 google-cloud-trace
+opencensus
+opencensus-ext-flask
+opencensus-ext-stackdriver

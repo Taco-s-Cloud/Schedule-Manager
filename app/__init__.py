@@ -2,7 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from .routers import schedules
 from .database import engine, Base
-from .middleware.logging import setup_logging, add_correlation_id
+# from .middleware.logging import setup_logging, add_correlation_id
 
 def create_app():
     app = Flask(__name__)

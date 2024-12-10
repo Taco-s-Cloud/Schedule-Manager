@@ -1,7 +1,7 @@
 import logging
 import uuid
 from flask import request
-from google.cloud import logging as cloud_logging
+from google.cloud import logging_v2 as cloud_logging
 from google.cloud import trace
 
 # Initialize Cloud Trace Client

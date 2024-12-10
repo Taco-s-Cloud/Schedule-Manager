@@ -3,22 +3,29 @@ import uuid
 from flask import request
 from google.cloud import logging_v2 as cloud_logging
 from google.cloud import trace
+from opencensus.trace import config_integration
+from opencensus.trace.exporters import stackdriver_exporter
+from opencensus.trace.samplers import AlwaysOnSampler
+from opencensus.trace.tracer import Tracer
 
-# Initialize Cloud Trace Client
-tracer = trace.Client()
-
+# Setup Google Cloud Logging
 def setup_logging():
     """Initialize Google Cloud Logging."""
     client = cloud_logging.Client()
     client.setup_logging()
     logging.info("Google Cloud Logging is configured.")
 
+# Middleware for adding Correlation ID and tracing
 def add_correlation_id(app):
-    """Middleware to add Correlation ID to every request."""
+    """Middleware to add Correlation ID and trace requests."""
+    config_integration.trace_integrations(['logging'])
+    exporter = stackdriver_exporter.StackdriverExporter()
+    tracer = Tracer(exporter=exporter, sampler=AlwaysOnSampler())
+
     @app.before_request
     def start_trace_and_add_correlation_id():
-        # Start a trace span
-        tracer.start_span(name=request.endpoint)
+        # Start a trace
+        tracer.span_context.trace_id
 
         # Generate or retrieve Correlation ID
         correlation_id = request.headers.get("X-Correlation-ID", str(uuid.uuid4()))
@@ -29,9 +36,6 @@ def add_correlation_id(app):
 
     @app.after_request
     def end_trace_and_add_correlation_id_to_response(response):
-        # End the trace span
-        tracer.end_span()
-
         # Include Correlation ID in the response headers
         response.headers["X-Correlation-ID"] = request.correlation_id
         return response

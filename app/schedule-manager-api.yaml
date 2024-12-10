@@ -1,0 +1,319 @@
+openapi: 3.0.0
+info:
+  title: Schedule Manager API
+  version: '1.0'
+  description: API for managing schedules and calendar events
+servers:
+  - url: http://localhost:5002
+    description: Local development server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  
+  schemas:
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user_id:
+          type: string
+        title:
+          type: string
+          nullable: false
+        description:
+          type: string
+        start_time:
+          type: string
+          format: date-time
+          nullable: false
+        end_time:
+          type: string
+          format: date-time
+          nullable: false
+        location:
+          type: string
+        reminder:
+          type: integer
+          description: Minutes before start_time
+      required:
+        - title
+        - start_time
+        - end_time
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+
+    ScheduleList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Schedule'
+        _links:
+          type: object
+          properties:
+            self:
+              type: string
+              description: Current page URL
+            next:
+              type: string
+              description: Next page URL
+            prev:
+              type: string
+              description: Previous page URL
+        pagination:
+          type: object
+          properties:
+            total:
+              type: integer
+            pages:
+              type: integer
+            current_page:
+              type: integer
+            per_page:
+              type: integer
+
+security:
+  - bearerAuth: []
+
+paths:
+  /schedules:
+    get:
+      summary: Get user's schedules with pagination
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            default: 10
+        - name: X-Correlation-ID
+          in: header
+          schema:
+            type: string
+          description: Correlation ID for request tracing
+      responses:
+        '200':
+          description: List of user's schedules
+          headers:
+            X-Correlation-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleList'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    post:
+      summary: Create a new schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      parameters:
+        - name: X-Correlation-ID
+          in: header
+          schema:
+            type: string
+          description: Correlation ID for request tracing
+      responses:
+        '201':
+          description: Schedule created
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL of created schedule
+            X-Correlation-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  schedule:
+                    $ref: '#/components/schemas/Schedule'
+                  _links:
+                    type: object
+                    properties:
+                      self:
+                        type: string
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schedules/{schedule_id}:
+    parameters:
+      - name: schedule_id
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: X-Correlation-ID
+        in: header
+        schema:
+          type: string
+        description: Correlation ID for request tracing
+    
+    put:
+      summary: Update an existing schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '200':
+          description: Schedule updated successfully
+          headers:
+            X-Correlation-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    
+    delete:
+      summary: Delete a schedule
+      responses:
+        '200':
+          description: Schedule deleted successfully
+          headers:
+            X-Correlation-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+        '404':
+          description: Schedule not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /schedules/batch:
+    post:
+      summary: Create multiple schedules asynchronously
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedules:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Schedule'
+      parameters:
+        - name: X-Correlation-ID
+          in: header
+          schema:
+            type: string
+          description: Correlation ID for request tracing
+      responses:
+        '202':
+          description: Batch creation accepted
+          headers:
+            Location:
+              schema:
+                type: string
+              description: URL to check operation status
+            X-Correlation-ID:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  operation_id:
+                    type: string
+                  _links:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'

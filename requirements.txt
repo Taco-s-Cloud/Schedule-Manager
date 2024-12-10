@@ -5,3 +5,4 @@ pg8000
 sqlalchemy
 firebase-admin
 google-cloud-logging
+google-cloud-trace

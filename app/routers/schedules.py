@@ -19,6 +19,7 @@ def get_schedules():
         #schedules = db.query(Schedule).all()
         schedule_list = [
             {
+                "id": schedule.id, 
                 "user_id": schedule.user_id,
                 "title": schedule.title,
                 "description": schedule.description,

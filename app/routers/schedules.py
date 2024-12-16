@@ -4,9 +4,62 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.schedule import Schedule
 from app.middleware.auth import verify_token
+import base64
 
 # Create a Blueprint for schedule routes
 schedules_blueprint = Blueprint('schedules', __name__)
+
+# PUB/SUB: Handle Pub/Sub messages
+@schedules_blueprint.route("/schedules/pubsub", methods=["POST"])
+def pubsub_handler():
+    try:
+        # Validate Pub/Sub message envelope
+        envelope = request.get_json()
+        if not envelope:
+            return "Bad Request: Missing JSON", 400
+
+        pubsub_message = envelope.get("message")
+        if not pubsub_message:
+            return "Bad Request: Missing 'message'", 400
+
+        # Decode Pub/Sub message data
+        data = base64.b64decode(pubsub_message.get("data", "")).decode("utf-8")
+        print(f"Pub/Sub Message Received: {data}")
+
+        # Extract additional Pub/Sub message attributes (optional)
+        attributes = pubsub_message.get("attributes", {})
+        print(f"Pub/Sub Message Attributes: {attributes}")
+
+        # Example: Parse the data as JSON (if the message is a JSON string)
+        parsed_data = None
+        try:
+            parsed_data = eval(data)  # Replace with json.loads(data) for secure parsing
+            print(f"Parsed Data: {parsed_data}")
+        except Exception as e:
+            print(f"Error parsing Pub/Sub message: {e}")
+
+        # Save to database (example)
+        if parsed_data:
+            db: Session = next(get_db())
+            new_schedule = Schedule(
+                user_id=parsed_data.get("user_id"),
+                title=parsed_data.get("title"),
+                description=parsed_data.get("description"),
+                start_time=parsed_data.get("start_time"),
+                end_time=parsed_data.get("end_time"),
+                location=parsed_data.get("location"),
+                reminder=int(parsed_data.get("reminder", 0)),
+            )
+            db.add(new_schedule)
+            db.commit()
+            db.refresh(new_schedule)
+            print(f"New schedule added from Pub/Sub: {new_schedule.id}")
+
+        return "Message processed", 200
+
+    except Exception as e:
+        print(f"Error processing Pub/Sub message: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # GET: Retrieve all schedules
 @schedules_blueprint.route("/schedules", methods=["GET"])
